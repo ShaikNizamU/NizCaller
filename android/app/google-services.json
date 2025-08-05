@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "426478821927",
+    "project_id": "nizcaller",
+    "storage_bucket": "nizcaller.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:426478821927:android:39f086f216dc1eb2e32402",
+        "android_client_info": {
+          "package_name": "com.nizcaller"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDoBITrvghBVpfhwnrARkvXSbdaLYgAF2c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,6 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
       android:name=".MainApplication"
@@ -20,6 +21,11 @@
         <intent-filter>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+          <!-- ✅ Add this one for FCM tap to open -->
+        <intent-filter>
+          <action android:name="FLUTTER_NOTIFICATION_CLICK" />
+          <category android:name="android.intent.category.DEFAULT" />
         </intent-filter>
       </activity>
     </application>

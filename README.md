@@ -1,97 +1,112 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# 📞 React Native Incoming Call Simulation App
 
-# Getting Started
+This React Native app simulates an **incoming call** triggered via **Firebase Cloud Messaging (FCM)**.  
+It displays a call screen with a ringtone when a push notification is received — even when the app is in background or killed.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+> 🔔 **No vibration is included** in this version — only the ringtone plays once.
 
-## Step 1: Start Metro
+---
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+## ✅ Features
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+- 🔔 Trigger call screen via push notification (FCM)
+- 🔊 Ringtone plays **once** automatically
+- 📞 Call UI with Accept and Reject buttons
+- 🚫 Works even when app is **killed**
+- 🔒 Notification click opens app and triggers call
+- 🔥 Firebase v1 API integration with access token support
+- 🧪 Displays the FCM token on screen for easy testing
 
-```sh
-# Using npm
-npm start
+---
 
-# OR using Yarn
-yarn start
-```
+## 📦 Tech Stack
 
-## Step 2: Build and run your app
+- React Native (CLI)
+- `@react-native-firebase/messaging`
+- `react-native-sound` (for ringtone playback)
+- Firebase Cloud Messaging (HTTP v1 API)
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+---
 
-### Android
 
-```sh
-# Using npm
-npm run android
 
-# OR using Yarn
-yarn android
-```
+### 🔄 Use Your Own Firebase Key (For Other Users)
 
-### iOS
+- They should:
+  - Create your own Firebase project
+  - Download your own `serviceAccountKey.json` as shown above
+  - Replace the placeholder file in the project root
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+> ✅ This allows you to send push notifications using **your own Firebase project** safely
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+---
 
-```sh
-bundle install
-```
+### 🔹 Step 2: Generate Access Token
 
-Then, and every time you update your native dependencies, run:
+Use the included script `getToken.js`:
 
-```sh
-bundle exec pod install
-```
+```js
+const { google } = require("googleapis");
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+const auth = new google.auth.GoogleAuth({
+  keyFile: "./serviceAccountKey.json",
+  scopes: ["https://www.googleapis.com/auth/firebase.messaging"],
+});
 
-```sh
-# Using npm
-npm run ios
+auth.getAccessToken().then(token => {
+  console.log("✅ Access Token:", token);
+});
 
-# OR using Yarn
-yarn ios
-```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+▶️ Run it in terminal:
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+node getToken.js
 
-## Step 3: Modify your app
+This will print your access token. Copy it.
 
-Now that you have successfully run the app, let's make changes!
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+📤 Send Push Notification (via Postman or cURL)
+🔸 Method
+POST https://fcm.googleapis.com/v1/projects/YOUR_PROJECT_ID/messages:send
+Replace YOUR_PROJECT_ID with your Firebase project ID.
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+🔸 Headers
+Key	            Value
+Authorization	Bearer YOUR_ACCESS_TOKEN
+Content-Type	application/json
 
-## Congratulations! :tada:
 
-You've successfully run and modified your React Native App. :partying_face:
+🔸 Body (JSON)
+{
+  "message": {
+    "token": "DEVICE_FCM_TOKEN_HERE",
+    "notification": {
+      "title": "Incoming Call",
+      "body": "Shaik Nizam is calling..."
+    },
+    "data": {
+      "type": "incoming_call"
+    },
+    "android": {
+      "priority": "high",
+      "notification": {
+        "click_action": "FLUTTER_NOTIFICATION_CLICK",
+        "sound": "default"
+      }
+    }
+  }
+}
 
-### Now what?
+✅ Once sent:
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+Notification will appear on the device
 
-# Troubleshooting
+Tapping it will open the app
 
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+The app will play ringtone and show incoming call screen
 
-# Learn More
 
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+🙋‍♂️ Author
+Shaik Nizam
+React Native Developer
