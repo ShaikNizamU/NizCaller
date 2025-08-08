@@ -8,20 +8,69 @@ import {
   Dimensions,
   Animated,
   Easing,
+  Alert,
 } from 'react-native';
 import messaging from '@react-native-firebase/messaging';
 import Sound from 'react-native-sound';
 import IncomingCallScreen from './src/screens/IncomingCallScreen';
+import CallKeep from 'react-native-callkeep';
+import RNCallKeep from 'react-native-callkeep';
+import Clipboard from '@react-native-clipboard/clipboard';
 
 const { width, height } = Dimensions.get('window');
+
+async function requestCallPermissions() {
+  if (Platform.OS === 'android') {
+    const granted = await PermissionsAndroid.requestMultiple([
+      PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE,
+      PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+      PermissionsAndroid.PERMISSIONS.CALL_PHONE,
+      // Android 13+ notifications permission
+      ...(Platform.Version >= 33 ? [PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS] : []),
+    ]);
+    console.log('Permissions granted:', granted);
+  } else {
+    await messaging().requestPermission();
+  }
+}
+
+
+const options = {
+  android: {
+    alertTitle: 'Permissions required',
+    alertDescription: 'This app needs access to your phone accounts',
+    cancelButton: 'Cancel',
+    okButton: 'OK',
+    additionalPermissions: [],
+    foregroundService: {
+      channelId: 'com.myapp.call_channel',
+      channelName: 'Incoming Calls',
+      notificationTitle: 'Incoming Call',
+    },
+  },
+};
 
 const App = () => {
   const [showCall, setShowCall] = useState(false);
   const ringtoneRef = useRef<Sound | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const [fcmToken, setFcmToken] = useState<string | null>(null);
 
   useEffect(() => {
-    // Pulse animation for waiting screen
+    requestCallPermissions();
+
+    CallKeep.setup({
+      android: {
+        alertTitle: 'Permissions required',
+        alertDescription: 'This app needs access to phone and microphone',
+        cancelButton: 'Cancel',
+        okButton: 'OK',
+      },
+    });
+  }, []);
+
+  useEffect(() => {
+    // Pulse animation
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
@@ -36,32 +85,27 @@ const App = () => {
           easing: Easing.ease,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     ).start();
 
-    messaging()
-      .getToken()
-      .then(token => {
-        console.log('🔥 FCM Token:', token);
-      });
+    getFCMToken();
 
-    requestPermissions();
+    RNCallKeep.setup(options);
+    RNCallKeep.setAvailable(true);
 
-    const unsubscribe = messaging().onMessage(async () => {
-      triggerCall();
+    // Foreground notification listener
+    const unsubscribe = messaging().onMessage(async remoteMessage => {
+      console.log('📩 Foreground message:', remoteMessage);
+      if (remoteMessage.data?.type === 'incoming_call') {
+        RNCallKeep.displayIncomingCall(
+          remoteMessage.data.uuid,
+          remoteMessage.data.caller,
+          remoteMessage.data.caller,
+          'number', // or 'email'
+          true, // hasVideo
+        );
+      }
     });
-
-    messaging().setBackgroundMessageHandler(async () => {
-      triggerCall();
-    });
-
-    messaging()
-      .getInitialNotification()
-      .then(remoteMessage => {
-        if (remoteMessage) {
-          triggerCall();
-        }
-      });
 
     return () => {
       unsubscribe();
@@ -69,13 +113,21 @@ const App = () => {
     };
   }, []);
 
-  const requestPermissions = async () => {
-    if (Platform.OS === 'android') {
-      await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
-      );
-    } else {
-      await messaging().requestPermission();
+  const getFCMToken = async () => {
+    try {
+      const token = await messaging().getToken();
+      console.log('🔥 FCM Token:', token);
+      setFcmToken(token);
+      // Send token to your backend if needed
+    } catch (error) {
+      console.log('❌ Error getting FCM token:', error);
+    }
+  };
+
+  const copyToClipboard = () => {
+    if (fcmToken) {
+      Clipboard.setString(fcmToken);
+      Alert.alert('Copied', 'FCM token copied to clipboard!');
     }
   };
 
@@ -85,23 +137,11 @@ const App = () => {
         console.log('❌ Failed to load sound:', error);
         return;
       }
-
-      sound.setNumberOfLoops(0); // ✅ Play once
-
-      sound.play(success => {
-        if (success) {
-          console.log('✅ Sound finished playing');
-        } else {
-          console.log('❌ Sound playback failed');
-        }
-
-        ringtoneRef.current = null;
-        setShowCall(false); // ✅ Hide call screen after sound ends
-      });
+      sound.setNumberOfLoops(-1); // loop until answered/rejected
+      sound.play();
+      ringtoneRef.current = sound;
     });
-
-    ringtoneRef.current = sound;
-    setShowCall(true); // Show the call screen
+    setShowCall(true);
   };
 
   const stopRingtone = () => {
@@ -137,6 +177,19 @@ const App = () => {
             <View style={styles.statusIndicator} />
             <Text style={styles.statusText}>Connected to server</Text>
           </View>
+
+          {fcmToken && (
+            <View style={styles.tokenContainer}>
+              <Text style={styles.tokenLabel}>FCM Token:</Text>
+              <Text
+                style={styles.tokenText}
+                selectable
+                onPress={copyToClipboard}
+              >
+                {fcmToken}
+              </Text>
+            </View>
+          )}
         </View>
       )}
     </View>
@@ -144,10 +197,7 @@ const App = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0a0a0a',
-  },
+  container: { flex: 1, backgroundColor: '#0a0a0a' },
   waitingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -171,20 +221,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  phoneIcon: {
-    fontSize: 60,
-  },
+  phoneIcon: { fontSize: 60 },
   title: {
     fontSize: 28,
     fontWeight: '600',
     color: 'white',
     marginBottom: 10,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#aaa',
-    marginBottom: 40,
-  },
+  subtitle: { fontSize: 16, color: '#aaa', marginBottom: 40 },
   statusContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -198,9 +242,29 @@ const styles = StyleSheet.create({
     backgroundColor: '#4CAF50',
     marginRight: 8,
   },
-  statusText: {
-    color: '#4CAF50',
-    fontSize: 14,
+  statusText: { color: '#4CAF50', fontSize: 14 },
+
+  // Added styles for FCM token display
+  tokenContainer: {
+    marginTop: 20,
+    paddingHorizontal: 20,
+    width: '100%',
+  },
+  tokenLabel: {
+    color: '#ccc',
+    fontWeight: '600',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  tokenText: {
+    color: '#00bfff',
+    fontSize: 12,
+    textAlign: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: '#00bfff',
+    borderRadius: 8,
   },
 });
 
