@@ -9,10 +9,11 @@ import {
   Animated,
   Easing,
   Alert,
+  Linking,
 } from 'react-native';
 import messaging from '@react-native-firebase/messaging';
 import Sound from 'react-native-sound';
-import IncomingCallScreen from './src/screens/IncomingCallScreen';
+import IncomingCallScreen from './src/screens/OngoingCallScreen';
 import CallKeep from 'react-native-callkeep';
 import RNCallKeep from 'react-native-callkeep';
 import Clipboard from '@react-native-clipboard/clipboard';
@@ -55,6 +56,26 @@ const App = () => {
   const ringtoneRef = useRef<Sound | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const [fcmToken, setFcmToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    Linking.getInitialURL().then(url => {
+      if (url) handleDeepLink(url);
+    });
+
+    const sub = Linking.addEventListener('url', ({ url }) => {
+      handleDeepLink(url);
+    });
+
+    return () => sub.remove();
+  }, []);
+
+  const handleDeepLink = (url) => {
+    const params = new URL(url).searchParams;
+    if (params.get('status') === 'answered') {
+      // Navigate to your in-call screen
+      setShowCall(true)
+    }
+  };
 
   useEffect(() => {
     requestCallPermissions();
@@ -153,15 +174,20 @@ const App = () => {
     }
   };
 
-  const handleReject = () => {
-    stopRingtone();
-    setShowCall(false);
-  };
+  // const handleReject = () => {
+  //   stopRingtone();
+  //   setShowCall(false);
+  // };
+
+  const handleEndCall = () => {
+  setShowCall(false);
+  // Add any additional call termination logic here
+};
 
   return (
     <View style={styles.container}>
       {showCall ? (
-        <IncomingCallScreen onReject={handleReject} />
+        <IncomingCallScreen onEndCall={handleEndCall} />
       ) : (
         <View style={styles.waitingContainer}>
           <Animated.View

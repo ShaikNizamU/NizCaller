@@ -1,4 +1,4 @@
-import { AppRegistry } from 'react-native';
+import { AppRegistry, Linking } from 'react-native';
 import messaging from '@react-native-firebase/messaging';
 import RNCallKeep from 'react-native-callkeep';
 import App from './App';
@@ -22,7 +22,17 @@ const callKeepOptions = {
 RNCallKeep.setup(callKeepOptions);
 RNCallKeep.setAvailable(true);
 
-// Background handler: runs when app is in background or killed
+// ✅ Handle "answer call" event
+RNCallKeep.addEventListener('answerCall', ({ callUUID }) => {
+  console.log('📞 Call answered:', callUUID);
+
+  // Open app via deep link so it works even if killed
+  Linking.openURL('nizcaller://call?status=answered');
+    RNCallKeep.answerIncomingCall(callUUID);
+  RNCallKeep.endCall(callUUID);
+});
+
+// Background FCM handler
 messaging().setBackgroundMessageHandler(async remoteMessage => {
   console.log('Background FCM:', remoteMessage.data);
 

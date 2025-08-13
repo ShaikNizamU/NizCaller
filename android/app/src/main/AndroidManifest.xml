@@ -44,6 +44,12 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="nizcaller" android:host="call" />
+            </intent-filter>
         </activity>
 
         <!-- CallKeep Connection Service (MUST be outside activity) -->
@@ -55,6 +61,9 @@
                 <action android:name="android.telecom.ConnectionService" />
             </intent-filter>
         </service>
+
+        <receiver android:name=".AnswerCallReceiver" android:exported="true" />
+
 
     </application>
 
